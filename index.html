@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#4f46e5">
+<title>APK Builder</title>
+<style>
+:root{--bg:#f4f5f8;--card:#fff;--tx:#14171c;--mu:#6b7280;--ac:#4f46e5;--bd:#e5e7eb;--ok:#16a34a;--er:#dc2626;--in:#2563eb}
+@media(prefers-color-scheme:dark){:root{--bg:#0d0f14;--card:#161a22;--tx:#e8eaf0;--mu:#8b93a3;--ac:#818cf8;--bd:#262c38;--ok:#4ade80;--er:#f87171;--in:#60a5fa}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,sans-serif;padding:max(14px,env(safe-area-inset-top)) 14px max(24px,env(safe-area-inset-bottom))}
+main{max-width:560px;margin:0 auto;display:grid;gap:12px}
+header{display:flex;align-items:center;gap:10px;padding:4px 2px}
+header h1{font-size:20px;margin:0}header small{color:var(--mu)}
+.logo{width:38px;height:38px;border-radius:11px;background:var(--ac);color:#fff;display:grid;place-items:center;font-size:20px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:16px}
+.card h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mu);margin:0 0 12px;display:flex;justify-content:space-between;align-items:center}
+.drop{display:block;border:2px dashed var(--bd);border-radius:12px;padding:18px;text-align:center;cursor:pointer}
+.drop b{display:block;word-break:break-all}.drop small{color:var(--mu)}
+button{font:inherit;border:0;border-radius:11px;padding:13px;background:var(--ac);color:#fff;font-weight:600;width:100%}
+button:disabled{opacity:.5}
+button.s{background:var(--bg);color:var(--tx);border:1px solid var(--bd);width:auto;padding:9px 14px}
+#go{margin-top:12px}
+.chip{font-size:12px;padding:3px 10px;border-radius:99px;background:var(--bg);color:var(--mu);font-weight:600;text-transform:none;letter-spacing:0}
+.chip.run{color:var(--in)}.chip.ok{color:var(--ok)}.chip.err{color:var(--er)}
+.barw{height:8px;background:var(--bg);border-radius:9px;overflow:hidden;margin-bottom:12px}
+#bar{height:100%;width:0;background:var(--ac);transition:width .4s}
+ul{list-style:none;margin:0;padding:0;display:grid;gap:9px}
+li{display:flex;gap:10px;align-items:center}
+li i{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font:700 11px/1 system-ui;border:2px solid var(--bd);flex:none}
+li.ok i{background:var(--ok);border-color:var(--ok);color:#fff}li.ok i::before{content:"✓"}
+li.err i{background:var(--er);border-color:var(--er);color:#fff}li.err i::before{content:"✕"}
+li.skip{opacity:.5}li.skip i::before{content:"–"}
+li.run i{border-color:var(--in);border-top-color:transparent;animation:sp .8s linear infinite}
+li.wait{opacity:.5}
+@keyframes sp{to{transform:rotate(360deg)}}
+.meta{display:flex;justify-content:space-between;color:var(--mu);font-size:13px;margin-top:12px}
+pre{margin:8px 0 0;background:#0b0d12;color:#cbd5e1;border-radius:10px;padding:10px;font:11px/1.45 ui-monospace,monospace;max-height:220px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+details{margin-top:12px}summary{color:var(--mu);font-size:13px}
+.file,.row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--bd)}
+.file:first-child,.row:first-child{border-top:0}
+.file div{flex:1;min-width:0}.file b{display:block;word-break:break-all}.file small{color:var(--mu)}
+.file button{width:auto;padding:9px 16px}
+.row{width:100%;background:none;color:var(--tx);border-radius:0;font-weight:400;padding:10px 0;text-align:left}
+.row small{margin-left:auto;color:var(--mu)}
+label.l{display:block;font-size:12px;color:var(--mu);margin:10px 0 4px}
+input[type=text],input[type=password]{width:100%;padding:10px;border:1px solid var(--bd);border-radius:9px;background:var(--bg);color:var(--tx);font-size:15px}
+#msg{color:var(--er);font-size:13px;margin-top:10px}
+a{color:var(--ac)}.hint{font-size:12px;color:var(--mu);margin-top:10px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+<header><div class="logo">📦</div><div><h1>APK Builder</h1><small>Zip Gradle → APK, otomatis</small></div></header>
+
+<section class="card">
+<h2>Build baru</h2>
+<label class="drop" for="zip"><b id="fn">Pilih file zip proyek</b><small id="fs">Ketuk untuk memilih</small></label>
+<input id="zip" type="file" accept=".zip,application/zip" hidden>
+<button id="go">Upload &amp; Build</button>
+<div id="msg"></div>
+</section>
+
+<section class="card" id="proc" hidden>
+<h2><span>Proses</span><span class="chip run" id="chip">Berjalan</span></h2>
+<div class="barw"><div id="bar"></div></div>
+<ul id="stg"></ul>
+<div class="meta"><span id="el">00:00</span><a id="gh" target="_blank" rel="noopener">Buka di GitHub</a></div>
+<details id="lgw" hidden open><summary>Log langsung</summary><pre id="lg"></pre></details>
+</section>
+
+<section class="card" id="res" hidden>
+<h2><span id="rt">Hasil</span></h2>
+<div id="files"></div>
+<div class="hint">Kalau tombol unduh gagal, tombol akan membuka halaman GitHub (harus sudah login di Chrome).</div>
+</section>
+
+<section class="card">
+<h2><span>Riwayat</span><button class="s" id="rf">Muat ulang</button></h2>
+<div id="hist"><small style="color:var(--mu)">Isi pengaturan dulu.</small></div>
+</section>
+
+<section class="card">
+<details open><summary>Pengaturan</summary>
+<label class="l">Repo (pemilik/nama)</label><input type="text" id="repo" value="tegarabade-pixel/Builder_Engine">
+<label class="l">Branch</label><input type="text" id="ref" value="main">
+<label class="l">File workflow</label><input type="text" id="wf" value="build.yml">
+<label class="l">Token GitHub (Contents &amp; Actions: read/write)</label><input type="password" id="tok">
+<div style="margin-top:12px"><button class="s" id="nbtn">Aktifkan notifikasi Chrome</button></div>
+<div class="hint">Notifikasi Chrome dan pantauan hanya hidup selama Chrome masih berjalan di latar belakang. Saat dibuka lagi, halaman otomatis melanjutkan pantauan build terakhir. Untuk notifikasi saat Chrome ditutup total, pasang aplikasi ntfy dan isi secret <b>NTFY_TOPIC</b> di repo privat (nama topik bebas, buat yang sulit ditebak), atau aktifkan notifikasi Actions di aplikasi GitHub.</div>
+</details>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const S={get(k){try{return localStorage.getItem('apk_'+k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem('apk_'+k,v)}catch(e){}}};
+for(const k of['repo','ref','wf','tok']){const v=S.get(k);if(v)$(k).value=v;$(k).onchange=()=>S.set(k,$(k).value.trim())}
+const R=()=>$('repo').value.trim(),T=()=>$('tok').value.trim();
+const api=(p,o={})=>fetch('https://api.github.com/repos/'+R()+p,{method:o.method||'GET',body:o.body,headers:{Authorization:'Bearer '+T(),Accept:o.accept||'application/vnd.github+json',...(o.body?{'Content-Type':'application/json'}:{})}});
+const gj=async p=>{const r=await api(p);if(!r.ok)throw new Error(r.status+' '+(await r.text()).slice(0,120));return r.json()};
+const fmt=b=>b>1048576?(b/1048576).toFixed(1)+' MB':Math.round(b/1024)+' KB';
+const mmss=ms=>{const s=Math.max(0,Math.floor(ms/1000));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+const ago=t=>{const m=Math.round((Date.now()-Date.parse(t))/60000);return m<1?'baru saja':m<60?m+' mnt lalu':m<1440?Math.round(m/60)+' jam lalu':Math.round(m/1440)+' hari lalu'};
+let pre=[],tracking=0,kick=null,wl=null,tick=null,items=[],hist=[],logN=0;
+
+$('zip').onchange=()=>{const f=$('zip').files[0];if(f){$('fn').textContent=f.name;$('fs').textContent=fmt(f.size)}};
+const busy=b=>{$('go').disabled=b;$('go').textContent=b?'Sedang berjalan...':'Upload & Build'};
+const lockOn=async()=>{try{wl=await navigator.wakeLock.request('screen')}catch(e){}};
+const lockOff=()=>{try{wl&&wl.release()}catch(e){}wl=null};
+function draw(steps){
+ const all=[...pre,...steps],done=all.filter(x=>x[1]==='ok').length;
+ $('bar').style.width=Math.round(done/Math.max(all.length,1)*100)+'%';
+ $('stg').innerHTML=all.map(x=>'<li class="'+x[1]+'"><i></i>'+esc(x[0])+'</li>').join('');
+}
+const jobSteps=j=>((j&&j.steps)||[]).filter(s=>!/^(Post |Complete job)/.test(s.name)).map(s=>[s.name,s.status==='completed'?(s.conclusion==='success'?'ok':s.conclusion==='skipped'?'skip':'err'):s.status==='in_progress'?'run':'wait']);
+function startTick(t0){clearInterval(tick);const f=()=>$('el').textContent='Berjalan '+mmss(Date.now()-t0);f();tick=setInterval(f,1000)}
+
+async function notify(t,b){
+ try{if(window.Notification&&Notification.permission==='granted'){const reg=await navigator.serviceWorker.ready;reg.showNotification(t,{body:b,tag:'apk-build',renotify:true,vibrate:[200,100,200]})}}catch(e){}
+ try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}
+ document.title=t;
+}
+$('nbtn').onclick=async()=>{
+ if(!window.Notification){alert('Browser tidak mendukung notifikasi.');return}
+ const p=await Notification.requestPermission();
+ $('nbtn').textContent=p==='granted'?'Notifikasi aktif ✓':'Notifikasi ditolak';
+};
+if(window.Notification&&Notification.permission==='granted')$('nbtn').textContent='Notifikasi aktif ✓';
+try{navigator.serviceWorker.register('sw.js')}catch(e){}
+
+async function liveLog(id){
+ try{const r=await api('/actions/jobs/'+id+'/logs');if(!r.ok)return;
+  $('lg').textContent=(await r.text()).split('\n').slice(-60).map(l=>l.replace(/^\S+Z /,'')).join('\n');
+  $('lgw').hidden=false;$('lg').scrollTop=1e9}catch(e){}
+}
+
+async function track(run){
+ if(tracking===run.id)return;
+ tracking=run.id;S.set('run',JSON.stringify(run));
+ $('proc').hidden=false;$('res').hidden=true;$('gh').href='https://github.com/'+R()+'/actions/runs/'+run.id;
+ $('chip').className='chip run';$('chip').textContent='Berjalan';$('lg').textContent='';
+ busy(true);lockOn();startTick(run.t);
+ while(tracking===run.id){
+  try{
+   const r=await gj('/actions/runs/'+run.id),j=(await gj('/actions/runs/'+run.id+'/jobs')).jobs[0];
+   pre=[['Upload zip','ok'],['Memicu workflow','ok'],['Menunggu runner',j&&j.status!=='queued'?'ok':'run']];
+   draw(jobSteps(j));$('msg').textContent='';
+   if(r.status==='in_progress'&&j&&logN++%2===0)liveLog(j.id);
+   if(r.status==='completed'){await finish(r);return}
+  }catch(e){$('msg').textContent='Koneksi terputus, mencoba lagi...'}
+  await new Promise(res=>{const t=setTimeout(res,3000);kick=()=>{clearTimeout(t);res()}});
+ }
+}
+async function finish(r){
+ tracking=0;S.set('run','');busy(false);lockOff();clearInterval(tick);
+ const ok=r.conclusion==='success';
+ $('chip').className='chip '+(ok?'ok':'err');$('chip').textContent=ok?'Berhasil':'Gagal';
+ $('el').textContent='Selesai dalam '+mmss(Date.parse(r.updated_at)-Date.parse(r.run_started_at||r.created_at));
+ notify(ok?'Build berhasil ✓':'Build gagal ✕','Build #'+r.run_number);
+ await showResult(r);loadHist();
+}
+async function showResult(r){
+ $('res').hidden=false;items=[];const ok=r.conclusion==='success';
+ $('rt').textContent='Build #'+r.run_number+' · '+(ok?'berhasil':(r.conclusion||r.status));
+ if(ok){try{(await gj('/releases/tags/build-'+r.run_number)).assets.forEach(a=>items.push({k:'a',n:a.name,s:a.size,a}))}catch(e){}}
+ if(!items.length){try{(await gj('/actions/runs/'+r.id+'/artifacts')).artifacts.forEach(a=>items.push({k:'z',n:a.name+'.zip',s:a.size_in_bytes,a}))}catch(e){}}
+ const gh='https://github.com/'+R()+'/actions/runs/'+r.id;
+ $('files').innerHTML=items.map((x,i)=>'<div class="file"><div><b>'+esc(x.n)+'</b><small>'+fmt(x.s)+'</small></div><button data-i="'+i+'">Unduh</button></div>').join('')||'<div class="hint">File tidak ditemukan. <a href="'+gh+'" target="_blank" rel="noopener">Buka di GitHub</a></div>';
+ $('files').dataset.gh=gh;$('res').scrollIntoView({behavior:'smooth'});
+}
+$('files').onclick=async e=>{
+ const b=e.target.closest('button[data-i]');if(!b)return;
+ const x=items[b.dataset.i],gh=$('files').dataset.gh;b.disabled=true;b.textContent='...';
+ try{
+  const r=x.k==='a'?await api('/releases/assets/'+x.a.id,{accept:'application/octet-stream'}):await api('/actions/artifacts/'+x.a.id+'/zip');
+  if(!r.ok)throw 0;
+  const bl=await r.blob(),a=document.createElement('a');
+  a.href=URL.createObjectURL(x.n.endsWith('.apk')?new Blob([bl],{type:'application/vnd.android.package-archive'}):bl);a.download=x.n;a.click();
+ }catch(err){window.open(x.k==='a'?x.a.browser_download_url:gh,'_blank')}
+ b.disabled=false;b.textContent='Unduh';
+};
+async function loadHist(){
+ try{hist=(await gj('/actions/runs?per_page=8')).workflow_runs;
+  $('hist').innerHTML=hist.map((r,i)=>{const c=r.status!=='completed'?'run':r.conclusion==='success'?'ok':'err',l=r.status!=='completed'?'Berjalan':r.conclusion==='success'?'Berhasil':'Gagal';
+   return '<button class="row" data-i="'+i+'"><b>#'+r.run_number+'</b><span class="chip '+c+'">'+l+'</span><small>'+ago(r.created_at)+'</small></button>'}).join('')||'<small>Belum ada build.</small>';
+ }catch(e){$('hist').innerHTML='<small style="color:var(--er)">Gagal memuat riwayat: cek repo dan token.</small>'}
+}
+$('hist').onclick=e=>{
+ const b=e.target.closest('button[data-i]');if(!b)return;const r=hist[b.dataset.i];
+ if(r.status==='completed')showResult(r);else track({id:r.id,number:r.run_number,t:Date.parse(r.created_at)});
+};
+$('rf').onclick=loadHist;
+
+const put=(body,cb)=>new Promise((res,rej)=>{
+ const x=new XMLHttpRequest();x.open('PUT','https://api.github.com/repos/'+R()+'/contents/upload/project.zip');
+ x.setRequestHeader('Authorization','Bearer '+T());x.setRequestHeader('Accept','application/vnd.github+json');
+ x.upload.onprogress=e=>e.lengthComputable&&cb(Math.round(e.loaded/e.total*100));
+ x.onload=()=>x.status<300?res():rej(new Error('Upload gagal ('+x.status+'): '+x.responseText.slice(0,120)));
+ x.onerror=()=>rej(new Error('Koneksi terputus saat upload'));x.send(body)});
+const b64=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=()=>rej(new Error('Gagal membaca file'));r.readAsDataURL(f)});
+
+$('go').onclick=async()=>{
+ const f=$('zip').files[0];
+ if(!f){$('msg').textContent='Pilih file zip dulu.';return}
+ if(!R()||!T()){$('msg').textContent='Isi repo dan token di Pengaturan.';return}
+ for(const k of['repo','ref','wf','tok'])S.set(k,$(k).value.trim());
+ $('msg').textContent='';busy(true);lockOn();
+ pre=[['Upload zip','run'],['Memicu workflow','wait'],['Menunggu runner','wait']];
+ $('proc').hidden=false;$('res').hidden=true;$('chip').className='chip run';$('chip').textContent='Berjalan';
+ $('lgw').hidden=true;$('bar').style.width='0';draw([]);$('el').textContent='';
+ try{
+  const ref=$('ref').value.trim(),wf=$('wf').value.trim();
+  const prev=((await gj('/actions/runs?per_page=1')).workflow_runs[0]||{id:0}).id;
+  let sha;const ex=await api('/contents/upload/project.zip?ref='+encodeURIComponent(ref));if(ex.ok)sha=(await ex.json()).sha;
+  const body=JSON.stringify({message:'upload project.zip',content:await b64(f),branch:ref,sha});
+  await put(body,p=>{pre[0][0]='Upload zip '+p+'%';draw([])});
+  pre[0]=['Upload zip','ok'];pre[1]=['Memicu workflow','run'];draw([]);
+  const d=await api('/actions/workflows/'+wf+'/dispatches',{method:'POST',body:JSON.stringify({ref})});
+  if(d.status!==204)throw new Error('Gagal memicu ('+d.status+'): '+(await d.text()).slice(0,120));
+  let run=null;
+  for(let i=0;i<45&&!run;i++){await new Promise(r=>setTimeout(r,2000));run=(await gj('/actions/runs?event=workflow_dispatch&per_page=5')).workflow_runs.find(x=>x.id>prev)}
+  if(!run)throw new Error('Run tidak ditemukan. Cek tab Actions.');
+  track({id:run.id,number:run.run_number,t:Date.now()});
+ }catch(e){
+  busy(false);lockOff();pre=pre.map(x=>x[1]==='run'?[x[0],'err']:x);draw([]);
+  $('chip').className='chip err';$('chip').textContent='Gagal';$('msg').textContent='Error: '+e.message;
+  notify('Build gagal ✕',e.message);
+ }
+};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(tracking)lockOn();kick&&kick()}});
+addEventListener('online',()=>kick&&kick());
+if(T()){loadHist();try{const r=JSON.parse(S.get('run')||'null');if(r&&r.id)track(r)}catch(e){}}
+</script>
+</body>
+</html>
